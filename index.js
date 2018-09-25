@@ -28,7 +28,6 @@ const propTypes = {
     keyExtractor:                   PropTypes.func,
     labelExtractor:                 PropTypes.func,
     visible:                        PropTypes.bool,
-    closeOnChange:                  PropTypes.bool,
     initValue:                      PropTypes.string,
     animationType:                  Modal.propTypes.animationType,
     style:                          ViewPropTypes.style,
@@ -42,7 +41,6 @@ const propTypes = {
     touchableStyle:                 ViewPropTypes.style,
     touchableActiveOpacity:         PropTypes.number,
     sectionTextStyle:               Text.propTypes.style,
-    selectedItemTextStyle:          Text.propTypes.style,
     cancelContainerStyle:           ViewPropTypes.style,
     cancelStyle:                    ViewPropTypes.style,
     cancelTextStyle:                Text.propTypes.style,
@@ -56,8 +54,6 @@ const propTypes = {
     scrollViewAccessibilityLabel:   PropTypes.string,
     cancelButtonAccessibilityLabel: PropTypes.string,
     passThruProps:                  PropTypes.object,
-    modalOpenerHitSlop:             PropTypes.object,
-    customSelector:                 PropTypes.node,
 };
 
 const defaultProps = {
@@ -68,7 +64,6 @@ const defaultProps = {
     keyExtractor:                   (item) => item.key,
     labelExtractor:                 (item) => item.label,
     visible:                        false,
-    closeOnChange:                  true,
     initValue:                      'Select me!',
     animationType:                  'slide',
     style:                          {},
@@ -82,7 +77,6 @@ const defaultProps = {
     touchableStyle:                 {},
     touchableActiveOpacity:         0.2,
     sectionTextStyle:               {},
-    selectedItemTextStyle:          {},
     cancelContainerStyle:           {},
     cancelStyle:                    {},
     cancelTextStyle:                {},
@@ -96,8 +90,6 @@ const defaultProps = {
     scrollViewAccessibilityLabel:   undefined,
     cancelButtonAccessibilityLabel: undefined,
     passThruProps:                  {},
-    modalOpenerHitSlop:             {top: 0, bottom: 0, left: 0, right: 0},
-    customSelector:                 undefined,
 };
 
 export default class ModalSelector extends React.Component {
@@ -134,14 +126,8 @@ export default class ModalSelector extends React.Component {
             // RN >= 0.50 on iOS comes with the onDismiss prop for Modal which solves RN issue #10471
             this.props.onChange(item);
         }
-        this.setState({ selected: this.props.labelExtractor(item), changedItem: item }, () => {
-          if (this.props.closeOnChange)
-            this.close();
-        });
-    }
-
-    getSelectedItem() {
-      return this.state.changedItem;
+        this.setState({selected: this.props.labelExtractor(item), changedItem: item });
+        this.close();
     }
 
     close = () => {
@@ -152,11 +138,13 @@ export default class ModalSelector extends React.Component {
     }
 
     open = () => {
-        this.props.onModalOpen();
+      this.props.onModalOpen();
+      if(!this.props.disabled){
         this.setState({
             modalVisible: true,
             changedItem:  undefined,
         });
+      }
     }
 
     renderSection = (section) => {
@@ -168,9 +156,6 @@ export default class ModalSelector extends React.Component {
     }
 
     renderOption = (option, isLastItem) => {
-        const optionLabel = this.props.labelExtractor(option);
-        const isSelectedItem = optionLabel === this.state.selected;
-
         return (
             <TouchableOpacity
               key={this.props.keyExtractor(option)}
@@ -182,10 +167,7 @@ export default class ModalSelector extends React.Component {
             >
                 <View style={[styles.optionStyle, this.props.optionStyle, isLastItem &&
                 {borderBottomWidth: 0}]}>
-                    <Text style={[styles.optionTextStyle,this.props.optionTextStyle,
-                                 isSelectedItem && this.props.selectedItemTextStyle]}>
-                        {optionLabel}
-                    </Text>
+                    <Text style={[styles.optionTextStyle,this.props.optionTextStyle]}>{this.props.labelExtractor(option)}</Text>
                 </View>
             </TouchableOpacity>);
     }
@@ -202,7 +184,7 @@ export default class ModalSelector extends React.Component {
         const closeOverlay = this.props.backdropPressToClose;
 
         return (
-            <TouchableWithoutFeedback key={'modalSelector' + (componentIndex++)}  accessible={false} onPress={() => {
+            <TouchableWithoutFeedback key={'modalSelector' + (componentIndex++)} onPress={() => {
                 closeOverlay && this.close();
             }}>
                 <View style={[styles.overlayStyle, this.props.overlayStyle]}>
@@ -255,21 +237,11 @@ export default class ModalSelector extends React.Component {
         return (
             <View style={this.props.style} {...this.props.passThruProps}>
                 {dp}
-                {this.props.customSelector ?
-                    this.props.customSelector
-                    :
-                    <TouchableOpacity
-                        hitSlop={this.props.modalOpenerHitSlop}
-                        activeOpacity={this.props.touchableActiveOpacity}
-                        style={this.props.touchableStyle}
-                        onPress={this.open}
-                        disabled={this.props.disabled}
-                    >
-                        <View style={this.props.childrenContainerStyle} pointerEvents="none">
-                            {this.renderChildren()}
-                        </View>
-                    </TouchableOpacity>
-                }
+                <TouchableOpacity activeOpacity={this.props.touchableActiveOpacity} style={this.props.touchableStyle} onPress={this.open}>
+                    <View style={this.props.childrenContainerStyle} pointerEvents="none">
+                        {this.renderChildren()}
+                    </View>
+                </TouchableOpacity>
             </View>
         );
     }
